@@ -65,6 +65,7 @@ class Edge():
         self.shared_state_dict = {}
         self.weight = 0.5
 
+    # 添加本地更新方法，与client中的相同
     def local_update(self):
         num_iter = self.args.num_iteration
         loss = 0.0
@@ -90,6 +91,7 @@ class Edge():
                 received_dict.append(self.receiver_buffer[client.id])
                 sample_num.append(client.weight)
 
+        # 在聚合方法中将edge自己的权重加进去
         if self.weight:
             self.all_weight_num += self.weight
             received_dict.append(self.self_receiver_buffer)
@@ -101,6 +103,7 @@ class Edge():
         self.shared_state_dict = average_weights(w=received_dict,
                                                  s_num=sample_num)
 
+    # 在edge发送cluster全局模型时发给自己
     def send_to_self(self):
         self.self_receiver_buffer = copy.deepcopy(self.shared_state_dict)
         self.model.update_model(self.self_receiver_buffer)

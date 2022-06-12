@@ -28,6 +28,8 @@ class Federate_learing():
         self.device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 
         self.train_loaders, self.test_loaders, self.v_train_loader, self.v_test_loader = get_dataloaders(args)
+
+        #初始化时修改了客户端个数为总客户端数减去选为edge的客户端数
         args.num_clients = self.args.num_clients - self.args.num_edges
         self.args = args
 
@@ -37,6 +39,7 @@ class Federate_learing():
                             args=self.args,
                             # 把客户端个数改了
                             device=self.device) for cid in range(self.args.num_clients)]
+        # 初始化edge时加入了为edge分配数据过程
         self.edges = [Edge(id = eid,
                            train_loader=self.train_loaders[eid+self.args.num_clients],  # train_loaders[cid],
                            test_loader=self.v_test_loader,
