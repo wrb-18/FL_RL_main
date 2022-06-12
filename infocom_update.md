@@ -1,5 +1,6 @@
 # 0612
 修改edge为自身参与训练：
+    
     在edge.py文件中：
         添加local_update方法；
         在aggregate方法中将自己的权重也加进去；
