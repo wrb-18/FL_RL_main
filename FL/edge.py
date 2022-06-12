@@ -46,6 +46,7 @@
 #         self.receiver_buffer = {}
 #         self.all_trainsample_num = 0
 import copy
+import random
 from FL.average import average_weights
 from FL.models.initialize_model import initialize_model
 import torch
@@ -61,9 +62,11 @@ class Edge():
         self.receiver_buffer = {}
         self.self_receiver_buffer = {}
         self.all_weight_num = 0
+        self.epoch = 0
         self.args = args
         self.shared_state_dict = {}
         self.weight = 0.5
+        self.eid = id
 
     # 添加本地更新方法，与client中的相同
     def local_update(self):
@@ -77,8 +80,25 @@ class Edge():
             self.epoch += 1
             self.model.exp_lr_sheduler(epoch=self.epoch)
         loss /= num_iter
-        self.self_receiver_buffer = loss
+        self.self_receiver_buffer = copy.deepcopy(self.model.shared_layers.state_dict())
         return loss
+
+    # 添加test_model方法
+    def test_model(self):
+        correct = 0.0
+        total = 0.0
+        for data in self.test_loader:
+            inputs, labels = data
+            break
+        size = labels.size(0)
+        with torch.no_grad():
+            for data in self.test_loader:
+                inputs, labels = data
+                outputs = self.model.test_model(input_batch=inputs)
+                _, predict = torch.max(outputs, 1)
+                total += size
+                correct += (predict == labels).sum()
+        return correct.item() / total
 
     def aggregate(self):
         received_dict = []
@@ -127,9 +147,13 @@ class Edge():
     def add_client(self, client):
         self.clients.append(client)
         self.all_weight_num += client.weight
-        
+
+    # 把训练上的reset加进去
     def reset(self, shared_state_dict):
         self.receiver_buffer = {}
         self.clients = []
         self.all_weight_num = 0
         self.shared_state_dict = copy.deepcopy(shared_state_dict)
+        self.epoch = 0
+        self.weight = random.random()
+        self.model = initialize_model(self.args, self.device)

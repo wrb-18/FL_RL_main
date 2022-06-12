@@ -1,0 +1,10 @@
+/venv/
+/data/
+/.idea/
+/__pycache__/
+/*/__pycache__/
+/datasets/__pycache__/
+/models/__pycache__/
+/result/
+.vscode
+workspace.code-workspaces

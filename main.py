@@ -220,14 +220,13 @@ def train(args):
         # weights = [random.random() for i in range(env.num_clients)]
         
         weights = [0.3, 0.3, 0.5, 0.5, 0.5, 0.5, 0.7, 0.7, 0.7, 0.7]
-        for i, weight in enumerate(weights): 
-            env_GREEN.clients[i].weight = weight
+        ups = env_GREEN.clients + env_GREEN.edges
+        for i, up in enumerate(ups):
+            up.weight = weights[i]
 
-        
-        
-        for i, weight in enumerate(static_weights): 
-            env_BLUE.clients[i].weight = weight
-            
+        downs = env_BLUE.clients + env_BLUE.edges
+        for i, down in enumerate(downs):
+            down.weight = static_weights[i]
 
         ep_reward = 0
         for t in range(args.max_ep_step):

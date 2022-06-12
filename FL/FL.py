@@ -24,13 +24,15 @@ import random
 
 
 class Federate_learing():
-    def __init__(self, args):
+    def __init__(self, args1):
         self.device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
+
+        args = copy.deepcopy(args1)
 
         self.train_loaders, self.test_loaders, self.v_train_loader, self.v_test_loader = get_dataloaders(args)
 
-        #初始化时修改了客户端个数为总客户端数减去选为edge的客户端数
-        args.num_clients = self.args.num_clients - self.args.num_edges
+        # 初始化时修改了客户端个数为总客户端数减去选为edge的客户端数
+        args.num_clients = args.num_clients - args.num_edges
         self.args = args
 
         self.clients = [Client(id=cid,
@@ -93,6 +95,7 @@ class Federate_learing():
         edges_choices = [random.randint(0, self.num_edges - 1) for i in range(self.num_clients)]
         for client, edges_choice in zip(self.clients, edges_choices):
             client.reset(shared_state_dict)
+
             client.set_edge(edges_choice)
             self.edges[client.eid].add_client(client)
 

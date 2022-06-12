@@ -99,7 +99,8 @@ def args_parser():
     parser.add_argument(
         '--num_edges',
         type = int,
-        default= 6,
+        # 默认值从6改成3
+        default= 3,
         help= 'number of edges'
     )
     parser.add_argument(

@@ -43,7 +43,7 @@ class Client():
         with torch.no_grad():
             for data in self.test_loader:
                 inputs, labels = data
-                outputs = self.model.test_model(input_batch= inputs)
+                outputs = self.model.test_model(input_batch=inputs)
                 _, predict = torch.max(outputs, 1)
                 total += size
                 correct += (predict == labels).sum()
