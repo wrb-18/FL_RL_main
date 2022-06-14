@@ -1,228 +1,91 @@
-import argparse
+
 import torch
 
-def args_parser():
-    parser = argparse.ArgumentParser()
-    #dataset and model
-    parser.add_argument(
-        '--dataset',
-        type = str,
-        default = 'mnist',
-        help = 'name of the dataset: mnist, cifar10'
-    )
-    parser.add_argument(
-        '--model',
-        type = str,
-        default = 'lenet',
-        help='name of model. mnist: logistic, lenet; cifar10: resnet18, cnn_complex'
-    )
-    parser.add_argument(
-        '--input_channels',
-        type = int,
-        default = 3,
-        help = 'input channels. mnist:1, cifar10 :3'
-    )
-    parser.add_argument(
-        '--output_channels',
-        type = int,
-        default = 10,
-        help = 'output channels'
-    )
-    #nn training hyper parameter
-    parser.add_argument(
-        '--batch_size',
-        type = int,
-        default = 32,
-        help = 'batch size when trained on client'
-    )
-    parser.add_argument(
-        '--lr',
-        type = float,
-        default = 0.01,
-        help = 'learning rate of the SGD when trained on client'
-    )
-    parser.add_argument(
-        '--lr_decay',
-        type = float,
-        default= '0.995',
-        help = 'lr decay rate'
-    )
-    parser.add_argument(
-        '--lr_decay_epoch',
-        type = int,
-        default=1,
-        help= 'lr decay epoch'
-    )
-    parser.add_argument(
-        '--momentum',
-        type = float,
-        default = 0,
-        help = 'SGD momentum'
-    )
-    parser.add_argument(
-        '--weight_decay',
-        type = float,
-        default = 0,
-        help= 'The weight decay rate'
-    )
-    parser.add_argument(
-        '--verbose',
-        type = int,
-        default = 0,
-        help = 'verbose for print progress bar'
-    )
-    #setting for federeated learning
-    parser.add_argument(
-        '--iid',
-        type = int,
-        default = 0,
-        help = 'distribution of the data, 1,0, -2(one-class)'
-    )
-    parser.add_argument(
-        '--edgeiid',
-        type=int,
-        default=0,
-        help='distribution of the data under edges, 1 (edgeiid),0 (edgeniid) (used only when iid = -2)'
-    )
-    parser.add_argument(
-        '--frac',
-        type = float,
-        default = 1,
-        help = 'fraction of participated clients'
-    )
-    parser.add_argument(
-        '--num_clients',
-        type = int,
-        default = 10,
-        help = 'number of all available clients'
-    )
-    parser.add_argument(
-        '--num_edges',
-        type = int,
-        # 默认值从6改成3
-        default= 3,
-        help= 'number of edges'
-    )
-    parser.add_argument(
-        '--seed',
-        type = int,
-        default = 1,
-        help = 'random seed (defaul: 1)'
-    )
-    parser.add_argument(
-        '--dataset_root',
-        type = str,
-        default = 'data',
-        help = 'dataset root folder'
-    )
-    parser.add_argument(
-        '--show_dis',
-        type= int,
-        default= 0,
-        help='whether to show distribution'
-    )
-    parser.add_argument(
-        '--classes_per_client',
-        type=int,
-        default = 2,
-        help='under artificial non-iid distribution, the classes per client'
-    )
-    parser.add_argument(
-        '--gpu',
-        type = int,
-        default=0,
-        help = 'GPU to be selected, 0, 1, 2, 3'
-    )
+class args_parser():
+    def __init__(self, load_dict=None):
+        if load_dict != None:
+            self.algorithm = load_dict["algorithm"]
+            self.is_layered = load_dict["is_layered"]
+            # self.edge_choice = load_dict["edge_choice"]
+            self.is_random_weight = load_dict["is_random_weight"]
+        else:
+            self.algorithm = "W_avg"
+            self.is_layered = 1
+            self.is_random_weight = 0
 
-    parser.add_argument(
-        '--mtl_model',
-        default=0,
-        type = int
-    )
-    parser.add_argument(
-        '--global_model',
-        default=1,
-        type=int
-    )
-    parser.add_argument(
-        '--local_model',
-        default=0,
-        type=int
-    )
-    
-    parser.add_argument(
-        '--num_iteration',
-        default=10,
-        type=int
-    )    
-    parser.add_argument(
-        '--num_edge_aggregation',
-        default=2,
-        type=int
-    )    
-    parser.add_argument(
-        '--num_communication',
-        default=5,
-        type=int
-    )
-    # parser.add_argument(
-    #     '--num_batch',
-    #     default=20,
-    #     type=int
-    # )
-    ################################################
-                    # 接下来的参数都是RL的
-    ################################################
-    parser.add_argument(
-        '--max_episodes',
-        default=6000,
-        type = int
-    )
-    parser.add_argument(
-        '--max_ep_step',
-        default=1,
-        type=int
-    )
-    parser.add_argument(
-        '--gamma',
-        default=0.9,
-        type=float
-    )
-    parser.add_argument(
-        '--rl_batch_size',
-        default=32,
-        type=int
-    )
-    parser.add_argument(
-        '--TAU',
-        default=0.01,
-        type=float
-    )
-    parser.add_argument(
-        '--render_interval',
-        default=3,
-        type=int
-    )
-    parser.add_argument(
-        '--memory_capacity',
-        default=10000,
-        type=int
-    )
+        self.edge_choice = "fixed"
+        self.model = "lenet"
+        self.batch_size = 10
+        self.max_ep_step = 80
+        self.num_iteration = 16
+        self.num_edge_aggregation = 3
+        self.num_communication = 1
+        self.data_distribution = 0.5
+        
+        self.max_episodes = 1
+        
+        self.num_clients = 24
+        self.num_edges = 6
 
-    parser.add_argument(
-        '--rl_interval',
-        default=100,
-        type=int
-    )
+        self.lr = 0.01
+        self.lr_decay = 0.995
+        self.lr_decay_epoch = 1
+        self.momentum = 0
+        self.weight_decay = 0
 
-    ################################################
-                    # 接下来的参数都是计算cost的
-    ################################################
+        self.gamma = 0.9
+        self.rl_batch_size = 32
+        self.memory_capacity = 10000
+        self.TAU = 0.01
+
+        self.cuda = torch.cuda.is_available()
+        self.device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
+        
+        self.load = False
+        
+        
+        
 
 
-    args = parser.parse_args()
-    args.cuda = torch.cuda.is_available()
-    #args.cuda = 0
-    args.device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
+# class args_parser():
+#     def __init__(self, load_dict=None):
+#         if load_dict != None:
+#             self.algorithm = load_dict["algorithm"]
+#             self.is_layered = load_dict["is_layered"]
+#             self.edge_choice = load_dict["edge_choice"]
+#             self.is_random_weight = load_dict["is_random_weight"]
+            
+#         else:
+#             self.algorithm = "W_avg"
+#             self.is_layered = 1
+#             self.edge_choice = "min"
+#             self.is_random_weight = 0
 
-    return args
+#         self.model = "logistic"
+#         self.batch_size = 16
+#         self.max_ep_step  =  60
+#         self.num_iteration = 20
+#         self.num_edge_aggregation  =  2
+#         self.num_communication = 1
+#         self.data_distribution = 0.8
+        
+#         self.max_episodes = 1
+        
+#         self.num_clients = 24
+#         self.num_edges = 6
+
+#         self.lr = 0.01
+#         self.lr_decay = 0.995
+#         self.lr_decay_epoch = 1
+#         self.momentum = 0
+#         self.weight_decay = 0
+
+#         self.gamma = 0.9
+#         self.rl_batch_size = 32
+#         self.memory_capacity = 10000
+#         self.TAU = 0.01
+
+#         self.cuda = torch.cuda.is_available()
+#         self.device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
+        
+#         self.load = True

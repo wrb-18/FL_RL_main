@@ -29,4 +29,4 @@
         资源剩余的计算：cost包括训练cost1和隐私cost2，
     修改reward为一轮完成时间的相反数，并且在reward中添加约束作为punishment
     
-    
+## 所有文件都已更新与FL_RL_update同步，RL相关的设置和对比算法没丢，edges_choices客户端的集群方式使用fixed方法，固定之后不再变化。data_distribution方式没有变

@@ -1,0 +1,7 @@
+{
+    "algorithm" : "FD_avg",
+    "is_layered" : 1,
+    "edge_choice" : "random",
+    "is_random_weight" : 0,
+    "max_episodes" : 1
+}
