@@ -15,6 +15,12 @@ class Cloud():
         self.model = initialize_model(args, self.device)
         self.shared_state_dict = copy.deepcopy(self.model.shared_layers.state_dict())
         
+        # update添加location初始化和测试精度初始化过程
+        self.location = (0, 0)
+        self.testing_acc = 0
+        # # update添加layered比较
+        # if not self.args.is_layered:
+        #     self.clients = []
         
     def aggregate(self):
         received_dict = []
@@ -39,6 +45,12 @@ class Cloud():
         client.model.update_model(client.receiver_buffer)
         return None
 
+    # 添加 将全局模型发送给edge作为下一轮的初始模型 的方法
+    def send_global_to_edge(self, edge):
+        edge.self_receiver_buffer = copy.deepcopy(self.shared_state_dict)
+        edge.model.update_model(edge.self_receiver_buffer)
+        return None
+
     def test_model(self):
         correct = 0.0
         total = 0.0
@@ -53,9 +65,12 @@ class Cloud():
                 _, predict = torch.max(outputs, 1)
                 total += size
                 correct += (predict == labels).sum()
+        self.testing_acc = correct.item() / total
         return correct.item() / total
     
     def reset(self):
         self.receiver_buffer = {}
         self.model = initialize_model(self.args, self.device)
         self.shared_state_dict = copy.deepcopy(self.model.shared_layers.state_dict())
+
+# 0613与FL_RL_update相比，未添加不分层的对比，以后再添加

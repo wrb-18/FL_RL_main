@@ -4,6 +4,7 @@
 
 # from init import EDGES
 # from FL.models.initialize_model import mnist_lenet
+import math
 import torch
 from options import args_parser
 import numpy as np
@@ -19,7 +20,7 @@ from math import *
 import matplotlib.pyplot as plt
 import random
 
-
+import torch.nn.functional as F
 
 
 
@@ -50,53 +51,59 @@ class Federate_learing():
 
         self.num_clients = args.num_clients
         self.num_edges = args.num_edges
-        
-        self.action_space = self.num_clients
+        self.step_count = 0
 
         self.reward = 0
-        self.step_count = 0
-        self.reset_cnt = 0
+        self.cost = 0
+        self.cost_real = 0
         self.plot_x = np.zeros(0)
         self.plot_y = np.zeros(0)
-
         self.rendered = 0
-
-        self.state = [-1] * (2 * self.num_clients)
+        
+        self.state = [-1] * (2 * self.num_clients + 1)
         self.state_space = len(self.state)
         self.observation_space = self.state_space
-
-        #self.action_bound = [-0.5, 0.5]
         self.action_bound = [0, 1]
-        self.render_color = "#000000"
+        self.action_space = self.num_clients
+
+        self.weight_threshold = 0.03
+
+        self.sum_weight_float = 0
+        # self.set_location(locations)
         
-        edges_choices = [random.randint(0, self.num_edges - 1) for i in range(self.num_clients)]
-        
+        edges_choices =  [min(i/(self.num_clients/self.num_edges), self.num_edges) for i in range(self.num_clients) ]
+
         for i, client in enumerate(self.clients):
             client.set_edge(edges_choices[i])
             self.edges[client.eid].add_client(client)
         
 
     def reset(self):
+        self.sum_weight_float = 0
+        self.cost = 0
+        self.cost_real = 0
         # agents初始化
-        self.reward = 0
+        # self.reward = 0
         torch.manual_seed(random.randint(0, 20))
         np.random.seed(random.randint(0, 20))
         
         
-        
+        # 清空模型参数
         self.cloud.reset()
         
         shared_state_dict = self.cloud.shared_state_dict
         
         for edge in self.edges:
             edge.reset(shared_state_dict)
-                
-        
+        # update客户端也重置模型
+        for client in self.clients:
+            client.reset(shared_state_dict)
+            
         edges_choices = [random.randint(0, self.num_edges - 1) for i in range(self.num_clients)]
         for client, edges_choice in zip(self.clients, edges_choices):
             client.reset(shared_state_dict)
-
-            client.set_edge(edges_choice)
+        # for client, edge in zip(self.clients, self.edges):
+        #     client.set_edge(edge.id)
             self.edges[client.eid].add_client(client)
 
         for i in range(self.num_clients):
@@ -185,6 +192,9 @@ class Federate_learing():
             
             for client in clients:
                 cloud.send_to_client(client)
+            #每次全局迭代cloud要发送全局模型到参与训练的客户端和edge
+            for edge in edges:
+                cloud.send_global_to_edge(edge)
                 
         return client_loss, cloud_loss
     

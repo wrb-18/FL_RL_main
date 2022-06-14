@@ -16,6 +16,7 @@ class Client():
         self.epoch = 0
         self.args = args
         self.weight = 0.5
+        self.testing_acc = 0
         self.eid = -1
         self.device = device
 
@@ -47,6 +48,7 @@ class Client():
                 _, predict = torch.max(outputs, 1)
                 total += size
                 correct += (predict == labels).sum()
+        self.testing_acc = correct.item() / total 
         return correct.item() / total 
 
     def send_to_edge(self, edge):

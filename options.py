@@ -215,6 +215,11 @@ def args_parser():
         type=int
     )
 
+    ################################################
+                    # 接下来的参数都是计算cost的
+    ################################################
+
+
     args = parser.parse_args()
     args.cuda = torch.cuda.is_available()
     #args.cuda = 0

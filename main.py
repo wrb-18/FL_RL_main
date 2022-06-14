@@ -333,9 +333,9 @@ if __name__ == '__main__':
     server = Server(env.state_space, env.action_space, 1)
     train(args)
     
-    while True:
-        x = 1
-    
+    # while True:
+    #     x = 1
+    #
     
         
     
