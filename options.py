@@ -1,3 +1,4 @@
+import random
 
 import torch
 
@@ -21,11 +22,19 @@ class args_parser():
         self.num_edge_aggregation = 3
         self.num_communication = 1
         self.data_distribution = 0.5
-        
+
+        self.num_clients = 16
+        self.num_edges = 8
+
+        self.tao_max = 100
+        self.selected_num = random.randint(self.num_clients - 6, self.num_clients - self.num_edges // 2)
         self.max_episodes = 1
-        
-        self.num_clients = 24
-        self.num_edges = 6
+
+        # cost
+        self.noise = 100
+        self.upload_dim = 100
+        self.capacitance = 100
+
 
         self.lr = 0.01
         self.lr_decay = 0.995
@@ -42,7 +51,8 @@ class args_parser():
         self.device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
         
         self.load = False
-        
+
+        self.total_resource = [10000] * self.num_edges
         
         
 

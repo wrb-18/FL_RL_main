@@ -1,6 +1,6 @@
 import copy
+import math
 import random
-
 from FL.average import average_weights
 from FL.models.initialize_model import initialize_model
 import torch
@@ -8,6 +8,8 @@ class Edge():
 
     def __init__(self, id, train_loader, test_loader, args, data_distribution):
         self.device = args.device
+
+        self.transmit_rate = random.randint(100, 150)
 
         self.train_loader = train_loader
         self.test_loader = test_loader
@@ -35,6 +37,17 @@ class Edge():
         self.train_index = 0
         self.data_distribution = data_distribution
 
+        self.transmit = random.randint(50, 100)
+        self.bandwidth = random.randint(50, 100)
+        self.gain = random.randint(50, 100)
+        self.pps = random.randint(50, 100)
+
+        self.privacy_b = random.randint(10, 20)
+        self.privacy_p = random.randint(10, 20)
+
+        self.n_k = random.randint(len(self.clients) - 3, len(self.clients))
+
+
     # 添加本地更新方法，与client中的相同
     def local_update(self):
         num_iter = self.args.num_iteration
@@ -49,6 +62,7 @@ class Edge():
         # self.epoch += 1
         # self.model.exp_lr_sheduler(epoch=self.epoch)
         loss /= num_iter
+        self.loss = loss
         return loss
 
     # 添加test_model方法
@@ -68,56 +82,72 @@ class Edge():
                 correct += (predict == labels).sum()
         self.testing_acc = correct.item() / total
         return correct.item() / total
-        
+
     def aggregate(self):
         received_dict = []
         sample_num = []
-        self.all_weight_num = 0
-        self.all_weight_float_num = 0
         self.all_data_num = 0
-        if self.args.algorithm == 'W_avg':
-            for client in self.clients:
-                self.all_weight_float_num += client.weight_float
-                if client.weight:
-                    self.all_weight_num += client.weight
-                    received_dict.append(self.receiver_buffer[client.id])
-                    sample_num.append(client.weight)
-            # 在聚合方法中将edge自己的权重加进去
-            if self.weight:
-                self.all_weight_num += self.weight
-                received_dict.append(self.self_receiver_buffer)
-                sample_num.append(self.weight)
+        for client in self.clients:
+            if client.data_num:
+                self.all_data_num += client.data_num
+                received_dict.append(self.receiver_buffer[client.id])
+                sample_num.append(client.data_num)
 
-            if self.all_weight_num == 0:
-                return
-            
-            self.shared_state_dict = average_weights(w = received_dict,
-                                                    s_num= sample_num)
-        elif self.args.algorithm == 'FD_avg':
-            for client in self.clients:
-                # 为了保证train里面计算cost的时候兼容
-                self.all_weight_float_num += client.weight_float
-                self.all_weight_num += client.weight
-                if client.data_num:
-                    self.all_data_num += client.data_num
-                    received_dict.append(self.receiver_buffer[client.id])
-                    sample_num.append(client.data_num)
+        # 在聚合方法中将edge自己的权重加进去
+        self.all_data_num += self.data_num
+        received_dict.append(self.self_receiver_buffer)
+        sample_num.append(self.data_num)
 
-            # 在聚合方法中将edge自己的权重加进去
-            self.all_weight_num += self.weight
-            received_dict.append(self.self_receiver_buffer)
-            sample_num.append(self.weight)
+        if self.all_data_num == 0:
+            return
 
-            if self.all_data_num == 0:
-                return
-            
-            self.shared_state_dict = average_weights(w = received_dict,
-                                                    s_num=sample_num)
-        else:
-            pass
+        self.shared_state_dict = average_weights(w=received_dict,
+                                                 s_num=sample_num)
+        self.model.update_model(copy.deepcopy(self.shared_state_dict))
+
+        # if self.args.algorithm == 'W_avg':
+        #     for client in self.clients:
+        #         self.all_weight_float_num += client.weight_float
+        #         if client.weight:
+        #             self.all_weight_num += client.weight
+        #             received_dict.append(self.receiver_buffer[client.id])
+        #             sample_num.append(client.weight)
+        #     # 在聚合方法中将edge自己的权重加进去
+        #     if self.weight:
+        #         self.all_weight_num += self.weight
+        #         received_dict.append(self.self_receiver_buffer)
+        #         sample_num.append(self.weight)
+        #
+        #     if self.all_weight_num == 0:
+        #         return
+        #
+        #     self.shared_state_dict = average_weights(w=received_dict,
+        #                                             s_num=sample_num)
+        # elif self.args.algorithm == 'FD_avg':
+        #     for client in self.clients:
+        #         # 为了保证train里面计算cost的时候兼容
+        #         self.all_weight_float_num += client.weight_float
+        #         self.all_weight_num += client.weight
+        #         if client.data_num:
+        #             self.all_data_num += client.data_num
+        #             received_dict.append(self.receiver_buffer[client.id])
+        #             sample_num.append(client.data_num)
+        #
+        #     # 在聚合方法中将edge自己的权重加进去
+        #     self.all_weight_num += self.weight
+        #     received_dict.append(self.self_receiver_buffer)
+        #     sample_num.append(self.weight)
+        #
+        #     if self.all_data_num == 0:
+        #         return
+        #
+        #     self.shared_state_dict = average_weights(w= received_dict,
+        #                                             s_num=sample_num)
+        # else:
+        #     pass
 
     # 在edge发送cluster全局模型时发给自己
-    def send_to_self(self, edge):
+    def send_to_self(self):
         self.self_receiver_buffer= copy.deepcopy(self.model.shared_layers.state_dict())
         self.model.update_model(self.self_receiver_buffer)
 
@@ -154,3 +184,16 @@ class Edge():
         self.weight_float = self.weight
         self.train_index = 0
         self.model = initialize_model(self.args, self.device)
+        # self.loss = 10
+
+    def comm_cost(self):
+        comm_cost = self.pps * self.args.upload_dim / \
+                    (self.bandwidth * math.log2(1 + (self.gain * self.transmit) / self.args.noise))
+        return comm_cost
+
+    def pri_cost(self):
+        pri_cost = self.privacy_b * self.privacy_p
+        return pri_cost
+
+    def comm_time_to_cloud(self):
+        return self.args.upload_dim / self.transmit_rate

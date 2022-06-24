@@ -23,31 +23,56 @@ class Cloud():
         received_dict = []
         sample_num = []
         if self.args.algorithm == 'W_avg':
-            if self.args.is_layered: 
+            if self.args.is_layered:
                 edges_aggregate_num = 0
-                
                 for edge in self.edges:
-                    if edge.all_weight_num:
+                    if edge.all_data_num:
                         edges_aggregate_num += 1
                         received_dict.append(self.receiver_buffer[edge.id])
-                        sample_num.append(edge.all_weight_num)
-                        
+                        sample_num.append(edge.all_data_num)
+
                 if edges_aggregate_num == 0:
                     return
-                self.shared_state_dict = average_weights(w = received_dict,
-                                                        s_num= sample_num)
+                self.shared_state_dict = average_weights(w=received_dict,
+                                                         s_num=sample_num)
                 self.model.update_model(copy.deepcopy(self.shared_state_dict))
+                # edges_aggregate_num = 1
+                # for edge in self.edges:
+                #     if edge.all_weight_num:
+                #         edges_aggregate_num += 1
+                #         received_dict.append(self.receiver_buffer[edge.id])
+                #         sample_num.append(edge.all_weight_num)
+                #
+                # if edges_aggregate_num == 0:
+                #     return
+                # self.shared_state_dict = average_weights(w = received_dict,
+                #                                         s_num= sample_num)
+                # self.model.update_model(copy.deepcopy(self.shared_state_dict))
+            # else:
+            #     self.all_weight_num = 0
+            #     for client in self.clients:
+            #         if client.weight:
+            #             self.all_weight_num += client.weight
+            #             received_dict.append(self.receiver_buffer[client.id])
+            #             sample_num.append(client.weight)
+            #     if self.all_weight_num == 0:
+            #         return
+            #     self.shared_state_dict = average_weights(w = received_dict,
+            #                                             s_num= sample_num)
+            #     self.model.update_model(copy.deepcopy(self.shared_state_dict))
             else:
-                self.all_weight_num = 0
+                clients_aggregate_num = 0
+
                 for client in self.clients:
-                    if client.weight:
-                        self.all_weight_num += client.weight
+                    if client.data_num:
+                        clients_aggregate_num += 1
                         received_dict.append(self.receiver_buffer[client.id])
-                        sample_num.append(client.weight)
-                if self.all_weight_num == 0:
+                        sample_num.append(client.data_num)
+
+                if clients_aggregate_num == 0:
                     return
-                self.shared_state_dict = average_weights(w = received_dict,
-                                                        s_num= sample_num)
+                self.shared_state_dict = average_weights(w=received_dict,
+                                                         s_num=sample_num)
                 self.model.update_model(copy.deepcopy(self.shared_state_dict))
         elif self.args.algorithm == 'FD_avg':
             if self.args.is_layered: 

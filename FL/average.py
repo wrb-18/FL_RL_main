@@ -4,9 +4,9 @@ from torch import nn
 
 def average_weights(w, s_num):
     """
-    :param w:
-    :param s_num:
-    :return :
+    :param w:键为CNN层数，值为该层的模型权重参数
+    :param s_num: 列表，元素为采样总数列表，元素为所有客户端的每层采样总数列表，每个列表是每个客户端的采样总数列表
+    :return :返回平均聚合之后的模型参数
     """
 
     total_sample_num = sum(s_num)

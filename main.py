@@ -5,8 +5,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+
+from FL import edge
 from options import args_parser
-from FL.FL import Federate_learing as FL
+from FL.FL import Federate_learning as FL
 from tqdm import tqdm
 import random       
 import json
@@ -151,7 +153,7 @@ def compare(dataloaders, locations_list):
         for i in tqdm(range(args.max_episodes * args.max_ep_step)):
             if i % args.max_ep_step == 0:
                 env.reset()
-            actions = [0.1] * env.num_clients
+            actions = [0.1] * (env.num_clients + env.num_edges * env.tao_max)
         
             _, reward, acc, cost = env.step(actions)
             plot_x = np.append(plot_x, i)
@@ -161,42 +163,43 @@ def compare(dataloaders, locations_list):
             np.savez(result_path, plot_x, plot_acc, plot_cost, plot_reward)
 
 
-def all_in_one(args, data_distribution):    
-    args_ = copy.deepcopy(args)
-    args_.num_clients = 1
-    
-    data_distribution_ = np.array(data_distribution)
-    data_distribution_ = np.sum(data_distribution_, axis = 0, keepdims=True)
-    data_distribution_ = data_distribution_.tolist()
-    dataloaders = get_dataloaders(args_, data_distribution_)
-    train_loaders, test_loaders, v_train_loader, v_test_loader, data_distribution_ = dataloaders
-    plot_x = np.zeros(0)
-    plot_reward = np.zeros(0)
-    plot_acc = np.zeros(0)
-    plot_cost = np.zeros(0)
-    
-    result_file = "all_in_one.npz"
-    result_path = os.path.join('./result/', result_file)
-    print(result_file) 
-    # 所有数据训练完
-    #args_.num_iteration = len(train_loaders[0]) // 3
-    for i in tqdm(range(args_.max_episodes * args_.max_ep_step)):
-        if i % args_.max_ep_step == 0:
-            client = Client(id=0,
-                            train_loader=train_loaders[0],
-                            test_loader=v_test_loader,
-                            args=args_,
-                            device=args_.device,
-                            data_distribution = data_distribution_[0]
-            )
-        client.local_update()
-        acc = client.test_model()
-        reward, cost = acc, 0
-        plot_x = np.append(plot_x, i)
-        plot_acc = np.append(plot_acc, acc)
-        plot_reward = np.append(plot_reward, reward)
-        plot_cost = np.append(plot_cost, cost)
-        np.savez(result_path, plot_x, plot_acc, plot_cost, plot_reward)
+# def all_in_one(args, data_distribution):
+#     args_ = copy.deepcopy(args)
+#     args_.num_clients = 1
+#
+#     data_distribution_ = np.array(data_distribution)
+#     data_distribution_ = np.sum(data_distribution_, axis = 0, keepdims=True)
+#     data_distribution_ = data_distribution_.tolist()
+#     dataloaders = get_dataloaders(args_, data_distribution_)
+#     train_loaders, test_loaders, v_train_loader, v_test_loader, data_distribution_ = dataloaders
+#     plot_x = np.zeros(0)
+#     plot_reward = np.zeros(0)
+#     plot_acc = np.zeros(0)
+#     plot_cost = np.zeros(0)
+#
+#     result_file = "all_in_one.npz"
+#     result_path = os.path.join('./result/', result_file)
+#     print(result_file)
+#     # 所有数据训练完
+#     #args_.num_iteration = len(train_loaders[0]) // 3
+#     for i in tqdm(range(args_.max_episodes * args_.max_ep_step)):
+#         if i % args_.max_ep_step == 0:
+#             client = Client(id=0,
+#                             train_loader=train_loaders[0],
+#                             test_loader=v_test_loader,
+#                             args=args_,
+#                             device=args_.device,
+#                             data_distribution = data_distribution_[0]
+#             )
+#         edge.local_update()
+#         client.local_update()
+#         acc = client.test_model()
+#         reward, cost = acc, 0
+#         plot_x = np.append(plot_x, i)
+#         plot_acc = np.append(plot_acc, acc)
+#         plot_reward = np.append(plot_reward, reward)
+#         plot_cost = np.append(plot_cost, cost)
+#         np.savez(result_path, plot_x, plot_acc, plot_cost, plot_reward)
 
     
 
@@ -240,7 +243,7 @@ if __name__ == '__main__':
             [1250, 0, 156, 0, 0, 312, 156, 312, 156, 156],  #3
             [1250, 0, 468, 156, 0, 156, 156, 312, 0, 0],  #4
             [1250, 0, 0, 156, 0, 312, 156, 312, 156, 156],  #5
-            [0, 1250, 156, 0, 468, 0, 156, 468, 0, 0],  #6
+            [0, 1250, 156, 0, 468, 0, 156, 468, 0, 0],  #6f
             [0, 1250, 156, 156, 312, 156, 156, 312, 0, 0],  #7
             [0, 1250, 156, 156, 156, 0, 468, 0, 312, 0],  #8
             [0, 1250, 0, 312, 624, 156, 0, 0, 156, 0],  #9
@@ -358,7 +361,7 @@ if __name__ == '__main__':
     plot_cost = np.zeros(0)
     for t in range(10000):
         state = env.reset()
-        print("RL",t)
+        print("RL", t)
         for ep in tqdm(range(args.max_ep_step)):
             actions = [] 
             for i, agent in enumerate(agents_list):
@@ -366,7 +369,6 @@ if __name__ == '__main__':
                 a = np.clip(np.random.normal(a, var), *env.action_bound)  # add randomness to action selection for exploration
                 actions += a.tolist()
             state_, reward, acc, cost = env.step(actions)
-
             plot_x = np.append(plot_x, args.max_ep_step * t + ep)
             plot_acc = np.append(plot_acc, acc)
             plot_reward = np.append(plot_reward, reward)
